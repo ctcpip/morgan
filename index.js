@@ -28,7 +28,6 @@ var auth = require('basic-auth')
 var debug = require('debug')('morgan')
 var deprecate = require('depd')('morgan')
 var onFinished = require('on-finished')
-var onHeaders = require('on-headers')
 
 /**
  * Array of CLF month names.
@@ -135,7 +134,7 @@ function morgan (format, options) {
       logRequest()
     } else {
       // record response start
-      onHeaders(res, recordStartTime)
+      recordResponseStartTime(res, recordStartTime)
 
       // log when response finished
       onFinished(res, logRequest)
@@ -541,4 +540,17 @@ function recordStartTime () {
 function token (name, fn) {
   morgan[name] = fn
   return this
+}
+
+function recordResponseStartTime (res, listener) {
+  var originalWriteHead = res.writeHead
+  var fired = false
+
+  res.writeHead = function () {
+    if (!fired) {
+      fired = true
+      listener.call(this)
+    }
+    return originalWriteHead.apply(this, arguments)
+  }
 }
