@@ -1578,6 +1578,42 @@ describe('morgan.compile(format)', function () {
   })
 })
 
+describe('Morgan header immutability with flat array headers', function () {
+  it('should not modify response headers', function (done) {
+    var server = http.createServer(function (req, res) {
+      var logger = morgan('combined', {
+        stream: { write: function () {} }
+      })
+
+      logger(req, res, function onNext (err) {
+        if (err) return done(err)
+
+        var headersFlatArray = ['X-Test', 'foo', 'X-Other', 'bar']
+        res.writeHead(200, headersFlatArray)
+
+        assert.ok(res._header.indexOf('X-Test: foo') > 0)
+        assert.ok(res._header.indexOf('X-Other: bar') > 0)
+
+        res.end('ok')
+      })
+    })
+
+    request(server)
+      .get('/')
+      .expect('X-Test', 'foo')
+      .expect('X-Other', 'bar')
+      .expect(200)
+      .end(function (err, res) {
+        if (err) return done(err)
+
+        assert.strictEqual(res.headers['x-test'], 'foo')
+        assert.strictEqual(res.headers['x-other'], 'bar')
+
+        done()
+      })
+  })
+})
+
 function after (count, callback) {
   var args = new Array(3)
   var i = 0
